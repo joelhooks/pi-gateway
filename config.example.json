@@ -1,0 +1,15 @@
+{
+  "defaultProjectId": "aihero",
+  "telegram": {
+    "userName": "ShitRat",
+    "ownerChatId": "7718912466",
+    "notificationIntervalMs": 60000
+  },
+  "projects": [
+    {
+      "id": "aihero",
+      "root": "/Users/joel/Code/badass-courses/aihero-support",
+      "aliases": ["ai-hero"]
+    }
+  ]
+}

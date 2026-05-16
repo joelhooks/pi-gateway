@@ -35,6 +35,17 @@ pi_gateway({ action: "heartbeat", agentId: "gateway-agent", agentName: "gateway-
 pi_gateway({ action: "status" })
 ```
 
+## Global relay config
+
+The standalone Telegram relay reads machine-local config from:
+
+```text
+~/.pi-gateway/config.json
+~/.pi-gateway/credentials.json
+```
+
+Use `config.example.json` and `credentials.example.json` as templates. Do not commit real credentials.
+
 ## Telegram launchd router
 
 Reusable router module:

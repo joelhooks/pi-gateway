@@ -5,17 +5,24 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { handlePiGatewayMessage, pollPiGatewayNotifications } from "./pi-gateway-router.mjs";
+import { gatewayHome, ownerChatIdFromHome, telegramNotificationIntervalMsFromHome, telegramTokenFromHome, telegramUserNameFromHome } from "../dist/src/relay/config.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const stateDir = process.env.PI_GATEWAY_TELEGRAM_STATE_DIR || join(process.env.HOME || __dirname, ".pi", "gateway-telegram-relay");
+const stateDir = process.env.PI_GATEWAY_TELEGRAM_STATE_DIR || gatewayHome();
 const ownerChatFile = process.env.PI_GATEWAY_TELEGRAM_OWNER_CHAT_FILE || join(stateDir, "owner-chat-id");
 const lastStartFile = join(stateDir, "last-start");
 
 mkdirSync(stateDir, { recursive: true });
 
+const token = telegramTokenFromHome();
+if (token && !process.env.TELEGRAM_BOT_TOKEN) process.env.TELEGRAM_BOT_TOKEN = token;
+
+const configuredOwnerChatId = ownerChatIdFromHome();
+if (configuredOwnerChatId && !existsSync(ownerChatFile)) writeFileSync(ownerChatFile, configuredOwnerChatId);
+
 const telegram = createTelegramAdapter({ mode: "polling" });
 const bot = new Chat({
-  userName: process.env.PI_GATEWAY_TELEGRAM_USER_NAME || "pi-gateway",
+  userName: telegramUserNameFromHome(),
   adapters: { telegram },
   state: createMemoryState(),
   onLockConflict: "force",
@@ -72,7 +79,7 @@ async function gatewayNotificationTick() {
 
 setInterval(() => {
   gatewayNotificationTick().catch((error) => console.error("[gateway] notification tick failed:", error.message?.slice(0, 240)));
-}, Number(process.env.PI_GATEWAY_TELEGRAM_NOTIFICATION_INTERVAL_MS || 60_000));
+}, telegramNotificationIntervalMsFromHome());
 
 await bot.initialize();
 
