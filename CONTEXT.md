@@ -52,6 +52,18 @@ _Avoid_: system command, admin action
 A System Gateway cache of routable project messages used for fast status and notifications.
 _Avoid_: source of truth, global inbox
 
+**Context Mode**:
+A per-operator Relay state that makes unprefixed messages target a selected Project Gateway.
+_Avoid_: Telegram thread, chat room
+
+**Agent Attachment**:
+A per-operator Relay state that forwards unprefixed messages to a specific live Project Agent when one is available.
+_Avoid_: context, default project
+
+**Agent Wake**:
+A System Gateway request to start or resume a Project Agent for a selected Project Gateway.
+_Avoid_: auto-run, implicit shell command
+
 ## Relationships
 
 - A **System Gateway** discovers and routes across many **Project Gateways**.
@@ -67,6 +79,9 @@ _Avoid_: source of truth, global inbox
 - An **Operator Message** can authorize direction, but it does not bypass project-local safety rules for destructive or customer-visible actions.
 - A **Project Gateway** is the source of truth for its messages.
 - A **Gateway Index** may cache project messages, but it must be rebuildable from registered Project Gateways.
+- **Context Mode** selects the default Project Gateway for unprefixed Relay messages.
+- **Agent Attachment** is stronger than Context Mode: it forwards unprefixed Relay messages to a live Project Agent instead of only writing to the Project Gateway.
+- **Agent Wake** may create a live Project Agent for a Context Mode when no suitable Project Agent is available.
 
 ## Example dialogue
 
@@ -82,3 +97,5 @@ _Avoid_: source of truth, global inbox
 - Cross-project write authority does not imply execution authority. Resolved: **ShitRat** can write **Operator Messages** into registered channels; **Project Agents** still enforce project-local approval for destructive or customer-visible work.
 - Message state must not be duplicated as competing sources of truth. Resolved: messages are physically stored in **Project Gateways**; **System Gateway** keeps only a rebuildable **Gateway Index**.
 - The System Gateway must survive Pi session exits. Resolved: run a separate **System Gateway Daemon**; Telegram is only a **Relay** actor inside it.
+- "Activate AI Hero context" could mean default project routing or live session chat. Resolved: **Context Mode** chooses the default Project Gateway; **Agent Attachment** explicitly connects to a live Project Agent when available.
+- Project slash commands such as `/aihero` should activate **Context Mode**, then try **Agent Attachment** or **Agent Wake**. If no agent is available, unprefixed messages still become Operator Messages in the selected Project Gateway.
