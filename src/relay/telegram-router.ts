@@ -47,10 +47,18 @@ export function createTelegramRouter(config: TelegramRouterConfig) {
     const routeAlternates = ["gateway", ...Array.from(aliases.keys())]
       .map((key) => key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
       .join("|");
-    const match = trimmed.match(new RegExp(`^(/|#)?(${routeAlternates})(\\s|$)`, "i"));
-    if (match) {
-      const route = match[2].toLowerCase();
-      const rest = trimmed.slice(match[0].length).trim();
+
+    const slash = trimmed.match(new RegExp(`^/(${routeAlternates})(?:@(\\w+))?(?:\\s+(.*))?$`, "i"));
+    if (slash) {
+      const route = slash[1].toLowerCase();
+      const rest = (slash[3] ?? "").trim();
+      return { project: route === "gateway" ? undefined : route, command: rest || "status" };
+    }
+
+    const mention = trimmed.match(new RegExp(`^(#)?(${routeAlternates})(\\s|$)`, "i"));
+    if (mention) {
+      const route = mention[2].toLowerCase();
+      const rest = trimmed.slice(mention[0].length).trim();
       return { project: route === "gateway" ? undefined : route, command: rest || "status" };
     }
 
@@ -78,7 +86,7 @@ export function createTelegramRouter(config: TelegramRouterConfig) {
 
     if (["help", "?"].includes(verb)) {
       const routes = config.projects.map((item) => `/${item.id}`).join(", ");
-      return `🐀 gateway commands\n/gateway status\n/gateway list [project]\n/gateway claim <id> [project]\n/gateway publish <title> -- <body>\nproject aliases: ${routes}`;
+      return `🐀 ShitRat commands\n\nTelegram slash commands:\n/gateway — status for the default project\n/aihero — status for AI Hero\n\nPlain text commands:\nstatus\nmessages\nhelp\ngateway list [project]\ngateway claim <id> [project]\ngateway publish <title> -- <body>\naihero list|claim|publish\n\nProject slash aliases: ${routes}`;
     }
 
     if (verb === "status") {

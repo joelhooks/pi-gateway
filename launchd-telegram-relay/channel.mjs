@@ -60,7 +60,7 @@ async function handleMessage(thread, message) {
       return;
     }
 
-    await thread.post("🐀 I’m ShitRat, the pi-gateway control plane. Try `messages`, `status`, or `/gateway help`.");
+    await thread.post("🐀 I’m ShitRat, the pi-gateway control plane. Try `messages`, `status`, or `help`. Slash commands like `/gateway` are Telegram command shortcuts.");
   } catch (error) {
     console.error(`[${thread.id}] error:`, error.message?.slice(0, 240));
     try { await thread.post("Gateway relay blew up. Check launchd logs."); } catch {}

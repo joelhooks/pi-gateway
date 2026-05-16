@@ -18,9 +18,13 @@ describe("telegram router", () => {
             });
             const published = await router.handle("/aihero publish Smoke -- from telegram", "t1");
             expect(published).toMatch(/published msg_/);
-            const listed = await router.handle("/gateway list aihero", "t1");
+            const listed = await router.handle("gateway list aihero", "t1");
             expect(listed).toContain("Smoke");
             expect(listed).toContain("from telegram");
+            const slashStatus = await router.handle("/aihero", "t1");
+            expect(slashStatus).toContain("aihero gateway");
+            const naturalList = await router.handle("messages", "t1");
+            expect(naturalList).toContain("Smoke");
         }
         finally {
             rmSync(root, { recursive: true, force: true });
