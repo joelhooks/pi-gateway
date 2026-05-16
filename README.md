@@ -41,7 +41,7 @@ In each project:
 
 ```text
 .pi/gateway/config.json
-.pi/gateway/state.json
+.pi/gateway/state/state.json
 ```
 
 ## Architecture

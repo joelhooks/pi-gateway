@@ -24,7 +24,7 @@ export function gatewayPaths(root: string): GatewayPaths {
     root,
     dir,
     configPath: path.join(dir, "config.json"),
-    statePath: path.join(dir, "state.json"),
+    statePath: path.join(dir, "state", "state.json"),
   };
 }
 
