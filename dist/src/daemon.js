@@ -22,6 +22,24 @@ async function main() {
         await Effect.runPromise(daemon.stop());
         return;
     }
+    if (command === "route") {
+        const [project, title, ...bodyParts] = process.argv.slice(3);
+        if (!project || !title)
+            throw new Error("usage: pi-gateway-daemon route <project> <title> [body]");
+        await Effect.runPromise(daemon.start());
+        console.log(JSON.stringify(await Effect.runPromise(daemon.routeOperatorMessage({ project, title, body: bodyParts.join(" ") || undefined })), null, 2));
+        await Effect.runPromise(daemon.stop());
+        return;
+    }
+    if (command === "claim") {
+        const [project, messageId] = process.argv.slice(3);
+        if (!project || !messageId)
+            throw new Error("usage: pi-gateway-daemon claim <project> <message-id>");
+        await Effect.runPromise(daemon.start());
+        console.log(JSON.stringify(await Effect.runPromise(daemon.claimProjectMessage({ project, messageId })), null, 2));
+        await Effect.runPromise(daemon.stop());
+        return;
+    }
     if (command !== "run") {
         console.error(`Unknown command: ${command}`);
         process.exit(1);
