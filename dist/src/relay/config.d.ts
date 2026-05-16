@@ -11,6 +11,7 @@ export type GatewayHomeConfig = {
         id: string;
         root: string;
         aliases?: string[];
+        wakeCommand?: string | false;
     }>;
 };
 export type GatewayCredentials = {

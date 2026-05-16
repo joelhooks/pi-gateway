@@ -16,7 +16,7 @@ describe("telegram router", () => {
             const router = createTelegramRouter({
                 defaultProjectId: "aihero",
                 stateFile: path.join(stateRoot, "router.json"),
-                projects: [{ id: "aihero", root, aliases: ["ai-hero"] }],
+                projects: [{ id: "aihero", root, aliases: ["ai-hero"], wakeCommand: false }],
             });
             const published = await router.handle("/aihero publish Smoke -- from telegram", "t1");
             expect(published).toMatch(/published msg_/);
@@ -38,10 +38,10 @@ describe("telegram router", () => {
         const stateRoot = tempRoot("pi-gateway-router-state-");
         const stateFile = path.join(stateRoot, "router.json");
         try {
-            const router = createTelegramRouter({ defaultProjectId: "aihero", stateFile, projects: [{ id: "aihero", root }] });
+            const router = createTelegramRouter({ defaultProjectId: "aihero", stateFile, projects: [{ id: "aihero", root, wakeCommand: false }] });
             const activated = await router.handle("/aihero", "thread-a");
             expect(activated).toContain("activated aihero context");
-            const freshRouter = createTelegramRouter({ defaultProjectId: "aihero", stateFile, projects: [{ id: "aihero", root }] });
+            const freshRouter = createTelegramRouter({ defaultProjectId: "aihero", stateFile, projects: [{ id: "aihero", root, wakeCommand: false }] });
             const where = await freshRouter.handle("where am i", "thread-a");
             expect(where).toContain("context: aihero");
             expect(where).toContain("attachment: none");
@@ -56,7 +56,7 @@ describe("telegram router", () => {
         const stateRoot = tempRoot("pi-gateway-router-state-");
         try {
             await Effect.runPromise(GatewayStore.fromRoot(root).heartbeat({ id: "agent-1", name: "AI Hero Agent", cwd: root, status: "running" }));
-            const router = createTelegramRouter({ defaultProjectId: "aihero", stateFile: path.join(stateRoot, "router.json"), projects: [{ id: "aihero", root }] });
+            const router = createTelegramRouter({ defaultProjectId: "aihero", stateFile: path.join(stateRoot, "router.json"), projects: [{ id: "aihero", root, wakeCommand: false }] });
             expect(await router.handle("/aihero", "thread-a")).toContain("attached to AI Hero Agent");
             const sent = await router.handle("please check the deploy", "thread-a");
             expect(sent).toContain("sent to aihero agent AI Hero Agent");
@@ -73,10 +73,10 @@ describe("telegram router", () => {
         const root = tempRoot("pi-gateway-router-root-");
         const stateRoot = tempRoot("pi-gateway-router-state-");
         try {
-            const router = createTelegramRouter({ defaultProjectId: "aihero", stateFile: path.join(stateRoot, "router.json"), projects: [{ id: "aihero", root }] });
+            const router = createTelegramRouter({ defaultProjectId: "aihero", stateFile: path.join(stateRoot, "router.json"), projects: [{ id: "aihero", root, wakeCommand: false }] });
             await router.handle("/aihero", "thread-a");
             const queued = await router.handle("wake up and inspect support", "thread-a");
-            expect(queued).toContain("requested Agent Wake");
+            expect(queued).toContain("tried to wake an agent");
             const messages = await Effect.runPromise(GatewayStore.fromRoot(root).listMessages());
             expect(messages.at(-1)?.metadata).toMatchObject({ contextMode: true, projectId: "aihero", agentWakeRequested: true });
         }
@@ -90,7 +90,7 @@ describe("telegram router", () => {
         const stateRoot = tempRoot("pi-gateway-router-state-");
         try {
             await Effect.runPromise(GatewayStore.fromRoot(root).heartbeat({ id: "agent-1", name: "AI Hero Agent", cwd: root, status: "running" }));
-            const router = createTelegramRouter({ defaultProjectId: "aihero", stateFile: path.join(stateRoot, "router.json"), projects: [{ id: "aihero", root }] });
+            const router = createTelegramRouter({ defaultProjectId: "aihero", stateFile: path.join(stateRoot, "router.json"), projects: [{ id: "aihero", root, wakeCommand: false }] });
             await router.handle("/aihero", "thread-a");
             expect(await router.handle("detach", "thread-a")).toContain("Context remains aihero");
             const where = await router.handle("where am i", "thread-a");

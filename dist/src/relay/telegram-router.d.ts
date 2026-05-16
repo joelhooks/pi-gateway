@@ -2,6 +2,7 @@ export type TelegramRouterProject = {
     id: string;
     root: string;
     aliases?: string[];
+    wakeCommand?: string | false;
 };
 export type TelegramRouterConfig = {
     projects: TelegramRouterProject[];

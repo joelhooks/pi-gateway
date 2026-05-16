@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import { Effect } from "effect";
 import { GatewayStore } from "../store.js";
@@ -8,6 +9,7 @@ export type TelegramRouterProject = {
   id: string;
   root: string;
   aliases?: string[];
+  wakeCommand?: string | false;
 };
 
 export type TelegramRouterConfig = {
@@ -64,6 +66,26 @@ export function createTelegramRouter(config: TelegramRouterConfig) {
     return agents.find((agent) => agent.status !== "stopped" && (!agent.cwd || agent.cwd === project.root || agent.cwd.startsWith(project.root)));
   }
 
+  function defaultWakeCommand(project: TelegramRouterProject) {
+    const prompt = `You are the ${project.id} Project Agent woken by ShitRat through pi-gateway. Start by reading the local Project Gateway messages, heartbeat as ${project.id}-telegram-agent if pi_gateway is available, then respond to pending Operator Messages. Stay in this project context.`;
+    return `cmux pi --model openai-codex/gpt-5.5 ${JSON.stringify(prompt)}`;
+  }
+
+  function wakeProjectAgent(project: TelegramRouterProject) {
+    if (project.wakeCommand === false) return { ok: false, error: "agent wake disabled" };
+    const command = project.wakeCommand || defaultWakeCommand(project);
+    const result = spawnSync("cmux", ["new-workspace", "--name", `${project.id}-agent`, "--cwd", project.root, "--command", command, "--focus", "false"], {
+      encoding: "utf8",
+      timeout: 10_000,
+    });
+    return {
+      ok: result.status === 0,
+      command,
+      output: (result.stdout || result.stderr || "").trim(),
+      error: result.error?.message || (result.status === 0 ? undefined : `cmux exited ${result.status}`),
+    };
+  }
+
   function parseCommand(text: string) {
     const trimmed = text.trim();
     const routeAlternates = ["gateway", ...Array.from(aliases.keys())]
@@ -109,18 +131,19 @@ export function createTelegramRouter(config: TelegramRouterConfig) {
       const selected = projectFor(current.projectId);
       const state = await Effect.runPromise(GatewayStore.fromRoot(selected.root).readState());
       const agent = current.attachedAgentId ? state.agents.find((item) => item.id === current.attachedAgentId) : liveAgentFor(selected, state.agents);
+      const wake = agent ? undefined : wakeProjectAgent(selected);
       const wakeRequested = !agent;
       const message = await Effect.runPromise(GatewayStore.fromRoot(selected.root).publish({
         from: `telegram:${threadId}`,
         to: agent?.id,
         title: text.trim().slice(0, 80),
         body: text.trim(),
-        metadata: { contextMode: true, projectId: selected.id, attachedAgentId: agent?.id, agentWakeRequested: wakeRequested },
+        metadata: { contextMode: true, projectId: selected.id, attachedAgentId: agent?.id, agentWakeRequested: wakeRequested, agentWakeOk: wake?.ok, agentWakeOutput: wake?.output, agentWakeError: wake?.error },
       }));
       if (agent) setThreadContext(threadId, selected.id, agent.id);
       return agent
         ? `sent to ${selected.id} agent ${agent.name || agent.id}: ${message.id}`
-        : `🐀 ${selected.id} context active. No live Project Agent found, so I queued this as Operator Message ${message.id} and requested Agent Wake.`;
+        : `🐀 ${selected.id} context active. I queued Operator Message ${message.id} and ${wake?.ok ? `woke an agent (${wake.output || "cmux ok"})` : `tried to wake an agent but failed: ${wake?.error || wake?.output || "unknown error"}`}.`;
     }
 
     const [verb, ...rest] = parsed.command.split(/\s+/);
@@ -135,9 +158,10 @@ export function createTelegramRouter(config: TelegramRouterConfig) {
     if (verb === "activate") {
       const state = await Effect.runPromise(store.readState());
       const agent = liveAgentFor(project, state.agents);
+      const wake = agent ? undefined : wakeProjectAgent(project);
       setThreadContext(threadId, project.id, agent?.id);
       if (agent) return `🐀 activated ${project.id} context and attached to ${agent.name || agent.id}. Unprefixed messages go there now.`;
-      return `🐀 activated ${project.id} context. No live Project Agent found; unprefixed messages will queue Operator Messages and request Agent Wake.`;
+      return `🐀 activated ${project.id} context. No live Project Agent found, so ${wake?.ok ? `I woke one (${wake.output || "cmux ok"})` : `I tried to wake one but failed: ${wake?.error || wake?.output || "unknown error"}`}. Unprefixed messages will queue Operator Messages there.`;
     }
 
     if (verb === "where") {

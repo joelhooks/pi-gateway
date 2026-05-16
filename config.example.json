@@ -9,7 +9,8 @@
     {
       "id": "aihero",
       "root": "/Users/joel/Code/badass-courses/aihero-support",
-      "aliases": ["ai-hero"]
+      "aliases": ["ai-hero"],
+      "wakeCommand": "cmux pi --model openai-codex/gpt-5.5 \"You are the AI Hero Project Agent woken by ShitRat through pi-gateway. Read pending Project Gateway messages and respond.\""
     }
   ]
 }
