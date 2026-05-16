@@ -210,13 +210,22 @@ export function createTelegramRouter(config) {
         const state = readRouterState();
         const seen = new Set(state.seenMessageIds ?? []);
         for (const project of config.projects) {
-            const messages = await Effect.runPromise(GatewayStore.fromRoot(project.root).listMessages({ status: "new", limit: 50 }));
+            const messages = await Effect.runPromise(GatewayStore.fromRoot(project.root).listMessages({ status: "new", limit: 100 }));
+            const outboundReplies = messages
+                .filter((message) => !seen.has(message.id))
+                .filter((message) => message.to?.startsWith("telegram:"))
+                .filter((message) => !message.receipts.some((receipt) => receipt.event === "telegram-relayed"));
             const important = messages
                 .filter((message) => !seen.has(message.id))
+                .filter((message) => !message.to?.startsWith("telegram:"))
                 .filter((message) => ["warn", "error"].includes(message.severity) || /blocked|failed|approval|authorize|env|secret|human/i.test(`${message.title} ${message.body ?? ""}`))
                 .slice(0, 5);
-            for (const message of important) {
-                await channel.post(formatMessages(project.id, [message]));
+            for (const message of [...outboundReplies, ...important]) {
+                const text = message.to?.startsWith("telegram:")
+                    ? (message.body || message.title)
+                    : formatMessages(project.id, [message]);
+                await channel.post(text);
+                await Effect.runPromise(GatewayStore.fromRoot(project.root).addReceipt(message.id, "telegram-relayed", message.to));
                 seen.add(message.id);
             }
         }
