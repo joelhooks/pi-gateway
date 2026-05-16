@@ -48,10 +48,16 @@ export function createTelegramRouter(config: TelegramRouterConfig) {
       .map((key) => key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
       .join("|");
     const match = trimmed.match(new RegExp(`^(/|#)?(${routeAlternates})(\\s|$)`, "i"));
-    if (!match) return undefined;
-    const route = match[2].toLowerCase();
-    const rest = trimmed.slice(match[0].length).trim();
-    return { project: route === "gateway" ? undefined : route, command: rest || "status" };
+    if (match) {
+      const route = match[2].toLowerCase();
+      const rest = trimmed.slice(match[0].length).trim();
+      return { project: route === "gateway" ? undefined : route, command: rest || "status" };
+    }
+
+    if (/^(help|commands|what can you do)\??$/i.test(trimmed)) return { project: undefined, command: "help" };
+    if (/^(status|are you running|you running)\??$/i.test(trimmed)) return { project: undefined, command: "status" };
+    if (/^(list|messages|queue|what messages\??|show messages)$/i.test(trimmed)) return { project: undefined, command: "list" };
+    return undefined;
   }
 
   function formatMessages(projectId: string, messages: readonly GatewayMessage[]) {

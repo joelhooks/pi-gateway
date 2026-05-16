@@ -17,7 +17,12 @@ mkdirSync(stateDir, { recursive: true });
 const token = telegramTokenFromHome();
 if (token && !process.env.TELEGRAM_BOT_TOKEN) process.env.TELEGRAM_BOT_TOKEN = token;
 
-const configuredOwnerChatId = ownerChatIdFromHome();
+function normalizeTelegramThreadId(id) {
+  if (!id) return id;
+  return id.startsWith("telegram:") ? id : `telegram:${id}`;
+}
+
+const configuredOwnerChatId = normalizeTelegramThreadId(ownerChatIdFromHome());
 if (configuredOwnerChatId && !existsSync(ownerChatFile)) writeFileSync(ownerChatFile, configuredOwnerChatId);
 
 const telegram = createTelegramAdapter({ mode: "polling" });
@@ -36,7 +41,7 @@ function checkRestart() {
 
 async function ownerChannel() {
   if (!existsSync(ownerChatFile)) return undefined;
-  const chatId = readFileSync(ownerChatFile, "utf8").trim();
+  const chatId = normalizeTelegramThreadId(readFileSync(ownerChatFile, "utf8").trim());
   return chatId ? bot.channel(chatId) : undefined;
 }
 
@@ -44,7 +49,7 @@ async function handleMessage(thread, message) {
   const text = message.text?.trim();
   if (!text) return;
 
-  if (!existsSync(ownerChatFile)) writeFileSync(ownerChatFile, thread.id);
+  if (!existsSync(ownerChatFile)) writeFileSync(ownerChatFile, normalizeTelegramThreadId(thread.id));
   console.log(`[${thread.id}] ← ${text.slice(0, 120)}`);
 
   try {
@@ -55,7 +60,7 @@ async function handleMessage(thread, message) {
       return;
     }
 
-    await thread.post("🐀 pi-gateway relay only. Try /gateway help");
+    await thread.post("🐀 I’m ShitRat, the pi-gateway control plane. Try `messages`, `status`, or `/gateway help`.");
   } catch (error) {
     console.error(`[${thread.id}] error:`, error.message?.slice(0, 240));
     try { await thread.post("Gateway relay blew up. Check launchd logs."); } catch {}
