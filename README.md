@@ -11,7 +11,7 @@ v0 gives agents a durable message bus via a Pi extension tool:
 - keep lifecycle explicit with XState
 - keep filesystem side effects isolated behind Effect services
 
-Telegram relay is planned as an optional adapter layered on top of the same bus.
+Telegram relay is included as an optional adapter layered on top of the same bus. The relay router can live inside an existing launchd Telegram bot or a dedicated relay process.
 
 ## Install locally
 
@@ -33,6 +33,30 @@ pi_gateway({ action: "list", status: "new" })
 pi_gateway({ action: "claim", id: "msg_...", claimant: "gateway-agent" })
 pi_gateway({ action: "heartbeat", agentId: "gateway-agent", agentName: "gateway-agent" })
 pi_gateway({ action: "status" })
+```
+
+## Telegram launchd router
+
+Reusable router module:
+
+```ts
+import { createTelegramRouter } from "pi-gateway/src/relay/telegram-router"
+```
+
+Example shim for this machine lives at:
+
+```text
+launchd-telegram-relay/pi-gateway-router.mjs
+```
+
+It supports:
+
+```text
+/gateway status
+/gateway list [project]
+/gateway claim <message-id> [project]
+/gateway publish <title> -- <body>
+/<project> status|list|claim|publish
 ```
 
 ## State files

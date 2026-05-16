@@ -2,13 +2,14 @@
   "name": "pi-gateway",
   "version": "0.1.0",
   "description": "Pi extension gateway message bus with optional Telegram relay",
-  "main": "index.js",
+  "main": "dist/src/cli.js",
   "directories": {
     "test": "test"
   },
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --outDir dist --noEmit false --declaration true"
   },
   "keywords": [
     "pi-package",
@@ -35,5 +36,8 @@
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
+  },
+  "bin": {
+    "pi-gateway": "dist/src/cli.js"
   }
 }
