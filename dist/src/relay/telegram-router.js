@@ -44,6 +44,8 @@ export function createTelegramRouter(config) {
         }
         if (/^(help|commands|what can you do)\??$/i.test(trimmed))
             return { project: undefined, command: "help" };
+        if (/^\/help(?:@\w+)?$/i.test(trimmed))
+            return { project: undefined, command: "help" };
         if (/^(status|are you running|you running)\??$/i.test(trimmed))
             return { project: undefined, command: "status" };
         if (/^(list|messages|queue|what messages\??|show messages)$/i.test(trimmed))
