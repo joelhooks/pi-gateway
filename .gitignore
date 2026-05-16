@@ -1,0 +1,4 @@
+node_modules/
+dist/
+.pi/gateway/*.tmp-*
+.DS_Store
