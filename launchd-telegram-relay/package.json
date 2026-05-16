@@ -1,0 +1,10 @@
+{
+  "name": "pi-gateway-launchd-telegram-relay",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@chat-adapter/state-memory": "latest",
+    "@chat-adapter/telegram": "latest",
+    "chat": "latest"
+  }
+}
