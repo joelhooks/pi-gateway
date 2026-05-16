@@ -30,30 +30,38 @@ pi-gateway-daemon run
 
 ## Launchd
 
-The launchd plist template lives in:
+The launchd plist templates live in:
 
 ```text
+launchd/com.pi-gateway.daemon.plist
 launchd/com.pi-gateway.telegram-relay.plist
 ```
 
 Install or update locally:
 
 ```bash
+cp launchd/com.pi-gateway.daemon.plist ~/Library/LaunchAgents/
 cp launchd/com.pi-gateway.telegram-relay.plist ~/Library/LaunchAgents/
+launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.pi-gateway.daemon.plist 2>/dev/null || true
 launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.pi-gateway.telegram-relay.plist 2>/dev/null || true
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.pi-gateway.daemon.plist
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.pi-gateway.telegram-relay.plist
+launchctl kickstart -k gui/$(id -u)/com.pi-gateway.daemon
 launchctl kickstart -k gui/$(id -u)/com.pi-gateway.telegram-relay
 ```
 
 Check status:
 
 ```bash
+launchctl print gui/$(id -u)/com.pi-gateway.daemon
 launchctl print gui/$(id -u)/com.pi-gateway.telegram-relay
 ```
 
 Logs:
 
 ```text
+~/Library/Logs/pi-gateway-daemon.out.log
+~/Library/Logs/pi-gateway-daemon.err.log
 ~/Library/Logs/pi-gateway-telegram-relay.out.log
 ~/Library/Logs/pi-gateway-telegram-relay.err.log
 ```
