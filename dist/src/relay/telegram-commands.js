@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 export const defaultTelegramCommands = [
     { command: "gateway", description: "Show default gateway status" },
-    { command: "aihero", description: "Show AI Hero gateway status" },
+    { command: "aihero", description: "Activate AI Hero context" },
     { command: "help", description: "Show ShitRat text commands" },
 ];
 export function setTelegramCommands(input) {

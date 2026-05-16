@@ -1,8 +1,8 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { Effect } from "effect";
 import { GatewayStore } from "../store.js";
-import type { GatewayMessage } from "../schema.js";
+import type { GatewayAgentHeartbeat, GatewayMessage } from "../schema.js";
+import { readTelegramContextState, saveTelegramContextState, type TelegramContextState } from "./context-state.js";
 
 export type TelegramRouterProject = {
   id: string;
@@ -32,14 +32,36 @@ export function createTelegramRouter(config: TelegramRouterConfig) {
     return aliases.get(key) ?? aliases.get(config.defaultProjectId.toLowerCase()) ?? config.projects[0];
   }
 
-  function readRouterState(): { seenMessageIds: string[] } {
-    try { return JSON.parse(readFileSync(config.stateFile, "utf8")); }
-    catch { return { seenMessageIds: [] }; }
+  function readRouterState(): TelegramContextState {
+    return readTelegramContextState(config.stateFile);
   }
 
-  function saveRouterState(state: { seenMessageIds: string[] }) {
-    mkdirSync(dirname(config.stateFile), { recursive: true });
-    writeFileSync(config.stateFile, `${JSON.stringify(state, null, 2)}\n`);
+  function saveRouterState(state: TelegramContextState) {
+    saveTelegramContextState(config.stateFile, state);
+  }
+
+  function setThreadContext(threadId: string, projectId: string, attachedAgentId?: string) {
+    const state = readRouterState();
+    state.threads[threadId] = { projectId, attachedAgentId, updatedAt: new Date().toISOString() };
+    saveRouterState(state);
+    return state.threads[threadId];
+  }
+
+  function clearAttachment(threadId: string) {
+    const state = readRouterState();
+    const current = state.threads[threadId];
+    if (!current) return undefined;
+    state.threads[threadId] = { projectId: current.projectId, updatedAt: new Date().toISOString() };
+    saveRouterState(state);
+    return state.threads[threadId];
+  }
+
+  function threadContext(threadId: string) {
+    return readRouterState().threads[threadId];
+  }
+
+  function liveAgentFor(project: TelegramRouterProject, agents: readonly GatewayAgentHeartbeat[]) {
+    return agents.find((agent) => agent.status !== "stopped" && (!agent.cwd || agent.cwd === project.root || agent.cwd.startsWith(project.root)));
   }
 
   function parseCommand(text: string) {
@@ -52,7 +74,7 @@ export function createTelegramRouter(config: TelegramRouterConfig) {
     if (slash) {
       const route = slash[1].toLowerCase();
       const rest = (slash[3] ?? "").trim();
-      return { project: route === "gateway" ? undefined : route, command: rest || "status" };
+      return { project: route === "gateway" ? undefined : route, command: rest || (route === "gateway" ? "status" : "activate") };
     }
 
     const mention = trimmed.match(new RegExp(`^(#)?(${routeAlternates})(\\s|$)`, "i"));
@@ -66,6 +88,8 @@ export function createTelegramRouter(config: TelegramRouterConfig) {
     if (/^\/help(?:@\w+)?$/i.test(trimmed)) return { project: undefined, command: "help" };
     if (/^(status|are you running|you running)\??$/i.test(trimmed)) return { project: undefined, command: "status" };
     if (/^(list|messages|queue|what messages\??|show messages)$/i.test(trimmed)) return { project: undefined, command: "list" };
+    if (/^(where am i|whereami|context)\??$/i.test(trimmed)) return { project: undefined, command: "where" };
+    if (/^(detach|disconnect)\??$/i.test(trimmed)) return { project: undefined, command: "detach" };
     return undefined;
   }
 
@@ -79,7 +103,25 @@ export function createTelegramRouter(config: TelegramRouterConfig) {
 
   async function handle(text: string, threadId = "telegram") {
     const parsed = parseCommand(text);
-    if (!parsed) return undefined;
+    if (!parsed) {
+      const current = threadContext(threadId);
+      if (!current?.projectId) return undefined;
+      const selected = projectFor(current.projectId);
+      const state = await Effect.runPromise(GatewayStore.fromRoot(selected.root).readState());
+      const agent = current.attachedAgentId ? state.agents.find((item) => item.id === current.attachedAgentId) : liveAgentFor(selected, state.agents);
+      const wakeRequested = !agent;
+      const message = await Effect.runPromise(GatewayStore.fromRoot(selected.root).publish({
+        from: `telegram:${threadId}`,
+        to: agent?.id,
+        title: text.trim().slice(0, 80),
+        body: text.trim(),
+        metadata: { contextMode: true, projectId: selected.id, attachedAgentId: agent?.id, agentWakeRequested: wakeRequested },
+      }));
+      if (agent) setThreadContext(threadId, selected.id, agent.id);
+      return agent
+        ? `sent to ${selected.id} agent ${agent.name || agent.id}: ${message.id}`
+        : `🐀 ${selected.id} context active. No live Project Agent found, so I queued this as Operator Message ${message.id} and requested Agent Wake.`;
+    }
 
     const [verb, ...rest] = parsed.command.split(/\s+/);
     const project = projectFor(parsed.project);
@@ -87,24 +129,45 @@ export function createTelegramRouter(config: TelegramRouterConfig) {
 
     if (["help", "?"].includes(verb)) {
       const routes = config.projects.map((item) => `/${item.id}`).join(", ");
-      return `🐀 ShitRat commands\n\nTelegram slash commands:\n/gateway — status for the default project\n/aihero — status for AI Hero\n\nPlain text commands:\nstatus\nmessages\nhelp\ngateway list [project]\ngateway claim <id> [project]\ngateway publish <title> -- <body>\naihero list|claim|publish\n\nProject slash aliases: ${routes}`;
+      return `🐀 ShitRat commands\n\nTelegram slash commands:\n/gateway — status for the default project\n/aihero — activate AI Hero context\n/help — show commands\n\nContext commands:\nwhere am i\ndetach\nmessages\nstatus\n\nText commands:\ngateway list [project]\ngateway claim <id> [project]\ngateway publish <title> -- <body>\naihero list|claim|publish\n\nProject slash aliases: ${routes}`;
+    }
+
+    if (verb === "activate") {
+      const state = await Effect.runPromise(store.readState());
+      const agent = liveAgentFor(project, state.agents);
+      setThreadContext(threadId, project.id, agent?.id);
+      if (agent) return `🐀 activated ${project.id} context and attached to ${agent.name || agent.id}. Unprefixed messages go there now.`;
+      return `🐀 activated ${project.id} context. No live Project Agent found; unprefixed messages will queue Operator Messages and request Agent Wake.`;
+    }
+
+    if (verb === "where") {
+      const current = threadContext(threadId);
+      if (!current?.projectId) return "🐀 no active context. Use /aihero to activate one.";
+      return `🐀 context: ${current.projectId}\nattachment: ${current.attachedAgentId ?? "none"}`;
+    }
+
+    if (verb === "detach") {
+      const current = clearAttachment(threadId);
+      if (!current?.projectId) return "🐀 no active context to detach.";
+      return `🐀 detached live agent. Context remains ${current.projectId}.`;
     }
 
     if (verb === "status") {
-      const state = await Effect.runPromise(store.readState());
-      return `🐀 ${project.id} gateway: ${state.messages.length} messages, ${state.agents.length} agents`;
+      const selected = parsed.project ? project : projectFor(threadContext(threadId)?.projectId);
+      const state = await Effect.runPromise(GatewayStore.fromRoot(selected.root).readState());
+      return `🐀 ${selected.id} gateway: ${state.messages.length} messages, ${state.agents.length} agents`;
     }
 
     if (["list", "queue"].includes(verb)) {
-      const selected = projectFor(rest[0] || parsed.project);
+      const selected = projectFor(rest[0] || parsed.project || threadContext(threadId)?.projectId);
       const messages = await Effect.runPromise(GatewayStore.fromRoot(selected.root).listMessages({ limit: 50 }));
       return formatMessages(selected.id, messages);
     }
 
     if (verb === "claim") {
       const id = rest[0];
-      const selected = projectFor(rest[1] || parsed.project);
-      if (!id) return "usage: /gateway claim <message-id> [project]";
+      const selected = projectFor(rest[1] || parsed.project || threadContext(threadId)?.projectId);
+      if (!id) return "usage: gateway claim <message-id> [project]";
       const claimed = await Effect.runPromise(GatewayStore.fromRoot(selected.root).claim(id, `telegram:${threadId}`));
       return claimed ? `claimed ${id}` : `nothing claimed for ${id}`;
     }
@@ -112,12 +175,12 @@ export function createTelegramRouter(config: TelegramRouterConfig) {
     if (verb === "publish") {
       const raw = rest.join(" ");
       const [title, body = ""] = raw.split(/\s+--\s+/, 2);
-      if (!title) return "usage: /gateway publish <title> -- <body>";
+      if (!title) return "usage: gateway publish <title> -- <body>";
       const message = await Effect.runPromise(store.publish({ from: `telegram:${threadId}`, title, body: body || undefined }));
       return `published ${message.id}`;
     }
 
-    return `unknown gateway command: ${verb}\ntry /gateway help`;
+    return `unknown gateway command: ${verb}\ntry help`;
   }
 
   async function pollNotifications(channel: TelegramChannel) {
@@ -137,7 +200,7 @@ export function createTelegramRouter(config: TelegramRouterConfig) {
       }
     }
 
-    saveRouterState({ seenMessageIds: Array.from(seen).slice(-300) });
+    saveRouterState({ ...state, seenMessageIds: Array.from(seen).slice(-300) });
   }
 
   return { handle, pollNotifications, parseCommand };

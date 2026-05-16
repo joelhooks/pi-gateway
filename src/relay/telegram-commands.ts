@@ -7,7 +7,7 @@ export type TelegramBotCommand = {
 
 export const defaultTelegramCommands: TelegramBotCommand[] = [
   { command: "gateway", description: "Show default gateway status" },
-  { command: "aihero", description: "Show AI Hero gateway status" },
+  { command: "aihero", description: "Activate AI Hero context" },
   { command: "help", description: "Show ShitRat text commands" },
 ];
 
