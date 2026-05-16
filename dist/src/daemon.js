@@ -1,8 +1,14 @@
 #!/usr/bin/env node
 import { Effect } from "effect";
 import { SystemGatewayDaemon } from "./system.js";
+import { ownerChatIdFromHome, telegramTokenFromHome } from "./relay/config.js";
+import { TelegramRelay } from "./relay/telegram-relay.js";
 const command = process.argv[2] ?? "run";
 const daemon = SystemGatewayDaemon.fromHome();
+const token = telegramTokenFromHome();
+const chatId = ownerChatIdFromHome();
+if (token && chatId)
+    daemon.registerRelay(new TelegramRelay({ token, chatId }));
 async function main() {
     if (command === "status") {
         await Effect.runPromise(daemon.start());
