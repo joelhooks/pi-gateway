@@ -38,6 +38,7 @@
     "vitest": "^3.2.4"
   },
   "bin": {
-    "pi-gateway": "dist/src/cli.js"
+    "pi-gateway": "dist/src/cli.js",
+    "pi-gateway-daemon": "dist/src/daemon.js"
   }
 }

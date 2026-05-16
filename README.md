@@ -46,6 +46,19 @@ The standalone Telegram relay reads machine-local config from:
 
 Use `config.example.json` and `credentials.example.json` as templates. Do not commit real credentials.
 
+## System Gateway Daemon
+
+The machine-level ShitRat daemon is available as:
+
+```bash
+pi-gateway-daemon run
+pi-gateway-daemon status
+pi-gateway-daemon projects
+pi-gateway-daemon reindex
+```
+
+It reads machine-local config from `~/.pi-gateway/config.json`, keeps project messages in their source Project Gateways, and stores only a rebuildable `gateway-index.json` in gateway home.
+
 ## Telegram launchd router
 
 Reusable router module:
@@ -77,6 +90,14 @@ In each project:
 ```text
 .pi/gateway/config.json
 .pi/gateway/state/state.json
+```
+
+## Commands
+
+```bash
+npm test
+npm run typecheck
+npm run build
 ```
 
 ## Architecture

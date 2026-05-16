@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.pi-gateway.telegram-relay</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/joel/.local/share/fnm/node-versions/v22.17.0/installation/bin/node</string>
+        <string>channel.mjs</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/joel/Code/joelhooks/pi-gateway/launchd-telegram-relay</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/Users/joel/.local/share/fnm/node-versions/v22.17.0/installation/bin:/Users/joel/.local/bin:/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin</string>
+        <key>HOME</key>
+        <string>/Users/joel</string>
+        <key>PI_GATEWAY_HOME</key>
+        <string>/Users/joel/.pi-gateway</string>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/joel/Library/Logs/pi-gateway-telegram-relay.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/joel/Library/Logs/pi-gateway-telegram-relay.err.log</string>
+</dict>
+</plist>
