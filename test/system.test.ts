@@ -5,6 +5,7 @@ import path from "node:path";
 import { Effect } from "effect";
 import { GatewayStore } from "../src/store.js";
 import { SystemGatewayDaemon } from "../src/system.js";
+import { FakeRelay } from "../src/relay/types.js";
 
 function tempRoot(prefix: string) {
   return mkdtempSync(path.join(tmpdir(), prefix));
@@ -98,6 +99,51 @@ describe("SystemGatewayDaemon", () => {
     } finally {
       rmSync(home, { recursive: true, force: true });
       rmSync(projectRoot, { recursive: true, force: true });
+    }
+  });
+
+  test("runs relay actors and records delivery receipts", async () => {
+    const home = tempRoot("pi-gateway-system-home-");
+    const projectRoot = tempRoot("pi-gateway-project-");
+    try {
+      await Effect.runPromise(GatewayStore.fromRoot(projectRoot).publish({ from: "agent", title: "Relay me", severity: "warn" }));
+      const relay = new FakeRelay("telegram");
+      const daemon = new SystemGatewayDaemon({ home, config: { projects: [{ id: "support", root: projectRoot }] } });
+      daemon.registerRelay(relay);
+      const health = await Effect.runPromise(daemon.start());
+      expect(health.relays).toEqual([{ id: "telegram", status: "running" }]);
+
+      await Effect.runPromise(daemon.rebuildIndex());
+      const deliveries = await Effect.runPromise(daemon.deliverIndexedNotifications());
+      expect(deliveries[0]).toMatchObject({ relayId: "telegram", delivered: true });
+      expect(relay.deliveries[0].title).toBe("Relay me");
+
+      const sourceMessages = await Effect.runPromise(GatewayStore.fromRoot(projectRoot).listMessages());
+      expect(sourceMessages[0].receipts.some((receipt) => receipt.event === "relayed")).toBe(true);
+      await Effect.runPromise(daemon.stop());
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+      rmSync(projectRoot, { recursive: true, force: true });
+    }
+  });
+
+  test("returns Discovery Suggestions without granting routing", async () => {
+    const home = tempRoot("pi-gateway-system-home-");
+    const registered = tempRoot("pi-gateway-project-registered-");
+    const candidate = tempRoot("pi-gateway-project-candidate-");
+    try {
+      await Effect.runPromise(GatewayStore.fromRoot(candidate).publish({ from: "agent", title: "Candidate" }));
+      const daemon = new SystemGatewayDaemon({ home, config: { projects: [{ id: "registered", root: registered }] } });
+      await Effect.runPromise(daemon.start());
+
+      const suggestions = await Effect.runPromise(daemon.discoverProjectSuggestions([registered, candidate]));
+      expect(suggestions).toEqual([{ id: path.basename(candidate), root: candidate, reason: "project gateway files found" }]);
+      await expect(Effect.runPromise(daemon.routeOperatorMessage({ project: path.basename(candidate), title: "nope" }))).rejects.toThrow(/not registered/);
+      await Effect.runPromise(daemon.stop());
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+      rmSync(registered, { recursive: true, force: true });
+      rmSync(candidate, { recursive: true, force: true });
     }
   });
 });

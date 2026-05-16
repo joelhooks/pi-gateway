@@ -3,6 +3,7 @@ import { Effect } from "effect";
 import type { GatewayMessage } from "./schema.js";
 import { gatewayMachine } from "./machine.js";
 import { type GatewayHomeConfig } from "./relay/config.js";
+import type { GatewayRelay, RelayHealth } from "./relay/types.js";
 export type RegisteredProject = {
     id: string;
     root: string;
@@ -17,12 +18,18 @@ export type GatewayIndex = {
     rebuiltAt: string;
     entries: GatewayIndexEntry[];
 };
+export type DiscoverySuggestion = {
+    id: string;
+    root: string;
+    reason: string;
+};
 export type SystemGatewayHealth = {
     status: string;
     tags: string[];
     home: string;
     projects: number;
     indexedMessages: number;
+    relays: RelayHealth[];
     lastError?: string;
 };
 export type SystemGatewayOptions = {
@@ -36,8 +43,10 @@ export declare class SystemGatewayDaemon {
     readonly actor: ActorRefFrom<typeof gatewayMachine>;
     private config;
     private index;
+    private relays;
     constructor(options?: SystemGatewayOptions);
     static fromHome(home?: string): SystemGatewayDaemon;
+    registerRelay(relay: GatewayRelay): GatewayRelay;
     start: () => Effect.Effect<SystemGatewayHealth, never, never>;
     stop: () => Effect.Effect<SystemGatewayHealth, never, never>;
     reloadConfig: () => Effect.Effect<RegisteredProject[], never, never>;
@@ -63,9 +72,11 @@ export declare class SystemGatewayDaemon {
         messageId: string;
         claimant?: string;
     }) => Effect.Effect<GatewayMessage | undefined, import("effect/ParseResult").ParseError, never>;
+    deliverIndexedNotifications: () => Effect.Effect<import("./relay/types.js").RelayDelivery[], import("effect/ParseResult").ParseError, never>;
+    discoverProjectSuggestions: (roots: string[]) => Effect.Effect<DiscoverySuggestion[], never, never>;
     health: () => Effect.Effect<SystemGatewayHealth, never, never>;
     snapshot(): SnapshotFrom<typeof gatewayMachine>;
     private projectsUnsafe;
     private resolveProjectUnsafe;
-    private healthUnsafe;
+    private healthUnsafeAsync;
 }

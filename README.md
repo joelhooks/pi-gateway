@@ -59,7 +59,7 @@ pi-gateway-daemon route <project> <title> [body]
 pi-gateway-daemon claim <project> <message-id>
 ```
 
-It reads machine-local config from `~/.pi-gateway/config.json`, keeps project messages in their source Project Gateways, and stores only a rebuildable `gateway-index.json` in gateway home.
+It reads machine-local config from `~/.pi-gateway/config.json`, keeps project messages in their source Project Gateways, and stores only a rebuildable `gateway-index.json` in gateway home. See `docs/system-gateway-operations.md` for local ShitRat operations.
 
 ## Telegram launchd router
 
