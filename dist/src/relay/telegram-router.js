@@ -60,6 +60,32 @@ export function createTelegramRouter(config) {
             error: result.error?.message || (result.status === 0 ? undefined : `cmux exited ${result.status}`),
         };
     }
+    function projectAgentWorkspace(project) {
+        const result = spawnSync("cmux", ["list-workspaces"], { encoding: "utf8", timeout: 5_000 });
+        const line = result.stdout.split("\n").find((item) => new RegExp(`workspace:\\d+\\s+${project.id}-agent(?:\\s|$)`).test(item));
+        return line?.match(/workspace:\d+/)?.[0];
+    }
+    function firstSurfaceInWorkspace(workspace) {
+        const result = spawnSync("cmux", ["tree"], { encoding: "utf8", timeout: 5_000 });
+        const lines = result.stdout.split("\n");
+        const start = lines.findIndex((line) => line.includes(`workspace ${workspace} `));
+        if (start < 0)
+            return undefined;
+        const nextWorkspace = lines.findIndex((line, index) => index > start && /workspace workspace:\d+/.test(line));
+        const block = lines.slice(start, nextWorkspace < 0 ? undefined : nextWorkspace).join("\n");
+        return block.match(/surface:\d+/)?.[0];
+    }
+    function nudgeProjectAgent(project, messageId, text) {
+        const workspace = projectAgentWorkspace(project);
+        if (!workspace)
+            return { ok: false, error: `workspace ${project.id}-agent not found` };
+        const surface = firstSurfaceInWorkspace(workspace);
+        if (!surface)
+            return { ok: false, error: `surface not found in ${workspace}` };
+        const prompt = `New Telegram context message ${messageId} in ${project.id}: ${JSON.stringify(text)}. Read .pi/gateway/state/state.json, claim ${messageId}, answer it, publish a response to the Telegram sender if needed, then keep watching for new context messages.\n`;
+        const result = spawnSync("cmux", ["send", "--workspace", workspace, "--surface", surface, prompt], { encoding: "utf8", timeout: 5_000 });
+        return { ok: result.status === 0, output: (result.stdout || result.stderr || "").trim(), error: result.error?.message || (result.status === 0 ? undefined : `cmux exited ${result.status}`) };
+    }
     function parseCommand(text) {
         const trimmed = text.trim();
         const routeAlternates = ["gateway", ...Array.from(aliases.keys())]
@@ -117,10 +143,11 @@ export function createTelegramRouter(config) {
                 body: text.trim(),
                 metadata: { contextMode: true, projectId: selected.id, attachedAgentId: agent?.id, agentWakeRequested: wakeRequested, agentWakeOk: wake?.ok, agentWakeOutput: wake?.output, agentWakeError: wake?.error },
             }));
+            const nudge = agent ? nudgeProjectAgent(selected, message.id, text.trim()) : undefined;
             if (agent)
                 setThreadContext(threadId, selected.id, agent.id);
             return agent
-                ? `sent to ${selected.id} agent ${agent.name || agent.id}: ${message.id}`
+                ? `queued ${message.id} for ${selected.id} agent ${agent.name || agent.id}${nudge?.ok ? " and nudged its cmux session" : `, but cmux nudge failed: ${nudge?.error || nudge?.output || "unknown error"}`}`
                 : `🐀 ${selected.id} context active. I queued Operator Message ${message.id} and ${wake?.ok ? `woke an agent (${wake.output || "cmux ok"})` : `tried to wake an agent but failed: ${wake?.error || wake?.output || "unknown error"}`}.`;
         }
         const [verb, ...rest] = parsed.command.split(/\s+/);

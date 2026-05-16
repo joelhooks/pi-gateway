@@ -67,7 +67,8 @@ describe("telegram router", () => {
 
       expect(await router.handle("/aihero", "thread-a")).toContain("attached to AI Hero Agent");
       const sent = await router.handle("please check the deploy", "thread-a");
-      expect(sent).toContain("sent to aihero agent AI Hero Agent");
+      expect(sent).toContain("queued");
+      expect(sent).toContain("aihero agent AI Hero Agent");
 
       const messages = await Effect.runPromise(GatewayStore.fromRoot(root).listMessages());
       expect(messages.at(-1)?.to).toBe("agent-1");
