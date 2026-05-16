@@ -67,8 +67,7 @@ describe("telegram router", () => {
 
       expect(await router.handle("/aihero", "thread-a")).toContain("attached to AI Hero Agent");
       const sent = await router.handle("please check the deploy", "thread-a");
-      expect(sent).toContain("queued");
-      expect(sent).toContain("aihero agent AI Hero Agent");
+      expect(sent).toBeUndefined();
 
       const messages = await Effect.runPromise(GatewayStore.fromRoot(root).listMessages());
       expect(messages.at(-1)?.to).toBe("agent-1");
@@ -86,7 +85,7 @@ describe("telegram router", () => {
       const router = createTelegramRouter({ defaultProjectId: "aihero", stateFile: path.join(stateRoot, "router.json"), projects: [{ id: "aihero", root, wakeCommand: false }] });
       await router.handle("/aihero", "thread-a");
       const queued = await router.handle("wake up and inspect support", "thread-a");
-      expect(queued).toContain("tried to wake an agent");
+      expect(queued).toBeUndefined();
 
       const messages = await Effect.runPromise(GatewayStore.fromRoot(root).listMessages());
       expect(messages.at(-1)?.metadata).toMatchObject({ contextMode: true, projectId: "aihero", agentWakeRequested: true });

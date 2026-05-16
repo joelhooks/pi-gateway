@@ -146,6 +146,9 @@ export function createTelegramRouter(config) {
             const nudge = agent ? nudgeProjectAgent(selected, message.id, text.trim()) : undefined;
             if (agent)
                 setThreadContext(threadId, selected.id, agent.id);
+            const debug = process.env.PI_GATEWAY_TELEGRAM_DEBUG === "1";
+            if (!debug)
+                return undefined;
             return agent
                 ? `queued ${message.id} for ${selected.id} agent ${agent.name || agent.id}${nudge?.ok ? " and nudged its cmux session" : `, but cmux nudge failed: ${nudge?.error || nudge?.output || "unknown error"}`}`
                 : `🐀 ${selected.id} context active. I queued Operator Message ${message.id} and ${wake?.ok ? `woke an agent (${wake.output || "cmux ok"})` : `tried to wake an agent but failed: ${wake?.error || wake?.output || "unknown error"}`}.`;
