@@ -247,6 +247,10 @@ export function createTelegramRouter(config: TelegramRouterConfig) {
       const outboundReplies = messages
         .filter((message) => !seen.has(message.id))
         .filter((message) => message.to?.startsWith("telegram:"))
+        .filter((message) => {
+          const context = message.to ? state.threads[message.to] : undefined;
+          return !context?.projectId || context.projectId === project.id;
+        })
         .filter((message) => !message.receipts.some((receipt) => receipt.event === "telegram-relayed"));
 
       const important = messages

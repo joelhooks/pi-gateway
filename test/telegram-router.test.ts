@@ -111,4 +111,32 @@ describe("telegram router", () => {
       rmSync(stateRoot, { recursive: true, force: true });
     }
   });
+
+  test("does not relay replies from a stale project context", async () => {
+    const aihero = tempRoot("pi-gateway-aihero-");
+    const cascadia = tempRoot("pi-gateway-cascadia-");
+    const stateRoot = tempRoot("pi-gateway-router-state-");
+    const stateFile = path.join(stateRoot, "router.json");
+    try {
+      const router = createTelegramRouter({
+        defaultProjectId: "aihero",
+        stateFile,
+        projects: [
+          { id: "aihero", root: aihero, wakeCommand: false },
+          { id: "cascadia", root: cascadia, wakeCommand: false },
+        ],
+      });
+      await router.handle("/cascadia", "telegram:1");
+      await Effect.runPromise(GatewayStore.fromRoot(aihero).publish({ from: "agent", to: "telegram:1", title: "stale", body: "wrong lane" }));
+      await Effect.runPromise(GatewayStore.fromRoot(cascadia).publish({ from: "agent", to: "telegram:1", title: "fresh", body: "right lane" }));
+
+      const posts: string[] = [];
+      await router.pollNotifications({ post: async (message) => { posts.push(String(message)); } });
+      expect(posts).toEqual(["right lane"]);
+    } finally {
+      rmSync(aihero, { recursive: true, force: true });
+      rmSync(cascadia, { recursive: true, force: true });
+      rmSync(stateRoot, { recursive: true, force: true });
+    }
+  });
 });
