@@ -39,6 +39,7 @@
   },
   "bin": {
     "pi-gateway": "dist/src/cli.js",
-    "pi-gateway-daemon": "dist/src/daemon.js"
+    "pi-gateway-daemon": "dist/src/daemon.js",
+    "pi-gateway-agent-worker": "dist/src/agent-worker.js"
   }
 }

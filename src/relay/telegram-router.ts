@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { join } from "node:path";
 import { Effect } from "effect";
 import { GatewayStore } from "../store.js";
@@ -104,6 +104,16 @@ export function createTelegramRouter(config: TelegramRouterConfig) {
     return block.match(/surface:\d+/)?.[0];
   }
 
+  function spawnProjectWorker(project: TelegramRouterProject, messageId: string, threadId: string) {
+    const child = spawn("node", ["/Users/joel/Code/joelhooks/pi-gateway/dist/src/agent-worker.js", project.root, project.id, messageId, threadId], {
+      cwd: project.root,
+      detached: true,
+      stdio: "ignore",
+      env: { ...process.env },
+    });
+    child.unref();
+  }
+
   function nudgeProjectAgent(project: TelegramRouterProject, messageId: string, text: string) {
     const workspace = projectAgentWorkspace(project);
     if (!workspace) return { ok: false, error: `workspace ${project.id}-agent not found` };
@@ -170,6 +180,7 @@ export function createTelegramRouter(config: TelegramRouterConfig) {
       }));
       const nudge = agent ? nudgeProjectAgent(selected, message.id, text.trim()) : undefined;
       if (agent) setThreadContext(threadId, selected.id, agent.id);
+      if (!agent) spawnProjectWorker(selected, message.id, threadId);
       const debug = process.env.PI_GATEWAY_TELEGRAM_DEBUG === "1";
       if (!debug) return TELEGRAM_ROUTED_SILENTLY;
       return agent
