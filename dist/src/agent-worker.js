@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { Effect } from "effect";
 import { GatewayStore } from "./store.js";
@@ -22,15 +23,20 @@ Joel sent this Telegram context message:
 ${message.body || message.title}
 
 Answer Joel directly and concisely. If he pasted a link, inspect/reason about it from this project context. Do not mention gateway plumbing unless it is relevant.`;
-const result = spawnSync("pi", ["--model", "openai-codex/gpt-5.5", "-p", prompt], {
+const piBin = process.env.PI_GATEWAY_PI_BIN || "/Users/joel/.pi/agent/bin/pi";
+const piCommand = existsSync(piBin) ? piBin : "pi";
+const result = spawnSync(piCommand, ["--model", "openai-codex/gpt-5.5", "-p", prompt], {
     cwd: root,
     encoding: "utf8",
     timeout: 180_000,
-    env: { ...process.env },
+    env: {
+        ...process.env,
+        PATH: `/Users/joel/.pi/agent/bin:/Users/joel/.local/share/fnm/node-versions/v22.17.0/installation/bin:/Users/joel/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:${process.env.PATH ?? ""}`,
+    },
 });
 const body = result.status === 0
     ? result.stdout.trim()
-    : `Project agent failed while answering ${messageId}: ${(result.stderr || result.stdout || result.error?.message || `exit ${result.status}`).trim()}`;
+    : `Project agent failed while answering ${messageId}: ${(result.stderr || result.stdout || result.error?.message || `exit ${result.status}`).trim()} (pi command: ${piCommand})`;
 await Effect.runPromise(store.publish({
     from: `${projectId}-telegram-worker`,
     to: telegramThreadId,
