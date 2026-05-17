@@ -1,4 +1,5 @@
 node_modules/
+.pi/
 .pi/gateway/*.tmp-*
 .DS_Store
 .pi-gateway/

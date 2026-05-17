@@ -4,6 +4,9 @@ export type TelegramBotCommand = {
     description: string;
 };
 export declare const defaultTelegramCommands: TelegramBotCommand[];
+export declare function telegramCommandsForProjects(projects: Array<{
+    id: string;
+}>): TelegramBotCommand[];
 export declare function setTelegramCommands(input: {
     token: string;
     commands?: TelegramBotCommand[];

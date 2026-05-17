@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 import { Effect } from "effect";
-import { defaultTelegramCommands, setTelegramCommands } from "../src/relay/telegram-commands.js";
+import { defaultTelegramCommands, setTelegramCommands, telegramCommandsForProjects } from "../src/relay/telegram-commands.js";
 describe("telegram commands", () => {
     test("registers default slash commands with Telegram", async () => {
         const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true, result: true }), { status: 200 }));
@@ -15,5 +15,12 @@ describe("telegram commands", () => {
         finally {
             vi.unstubAllGlobals();
         }
+    });
+    test("builds slash commands from registered projects", () => {
+        expect(telegramCommandsForProjects([{ id: "aihero" }, { id: "cascadia" }, { id: "bad-name-with-dash" }])).toEqual([
+            ...defaultTelegramCommands,
+            { command: "aihero", description: "Activate aihero context" },
+            { command: "cascadia", description: "Activate cascadia context" },
+        ]);
     });
 });

@@ -1,9 +1,16 @@
 import { Effect } from "effect";
 export const defaultTelegramCommands = [
     { command: "gateway", description: "Show default gateway status" },
-    { command: "aihero", description: "Activate AI Hero context" },
     { command: "help", description: "Show ShitRat text commands" },
 ];
+export function telegramCommandsForProjects(projects) {
+    return [
+        ...defaultTelegramCommands,
+        ...projects
+            .filter((project) => /^[a-z][a-z0-9_]{0,31}$/i.test(project.id))
+            .map((project) => ({ command: project.id, description: `Activate ${project.id} context` })),
+    ];
+}
 export function setTelegramCommands(input) {
     return Effect.tryPromise({
         try: async () => {

@@ -5,8 +5,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { handlePiGatewayMessage, pollPiGatewayNotifications } from "./pi-gateway-router.mjs";
-import { gatewayHome, ownerChatIdFromHome, telegramNotificationIntervalMsFromHome, telegramTokenFromHome, telegramUserNameFromHome } from "../dist/src/relay/config.js";
-import { setTelegramCommands } from "../dist/src/relay/telegram-commands.js";
+import { gatewayHome, ownerChatIdFromHome, readGatewayHomeConfig, telegramNotificationIntervalMsFromHome, telegramTokenFromHome, telegramUserNameFromHome } from "../dist/src/relay/config.js";
+import { setTelegramCommands, telegramCommandsForProjects } from "../dist/src/relay/telegram-commands.js";
 import { Effect } from "effect";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -93,7 +93,7 @@ await bot.initialize();
 
 if (token) {
   try {
-    await Effect.runPromise(setTelegramCommands({ token }));
+    await Effect.runPromise(setTelegramCommands({ token, commands: telegramCommandsForProjects(readGatewayHomeConfig().projects ?? []) }));
     console.log("pi-gateway Telegram slash commands registered");
   } catch (error) {
     console.error("[telegram] Failed to register slash commands:", error.message?.slice(0, 240));
