@@ -55,7 +55,7 @@ async function handleMessage(thread, message) {
   console.log(`[${thread.id}] ← ${text.slice(0, 120)}`);
 
   try {
-    await thread.startTyping?.();
+    try { await thread.startTyping?.(); } catch (error) { console.error(`[${thread.id}] typing failed:`, error.message?.slice(0, 160)); }
     const routed = await handlePiGatewayMessage(text, thread.id);
     if (routed) {
       console.log(`[${thread.id}] gateway → ${routed.slice(0, 120)}`);
