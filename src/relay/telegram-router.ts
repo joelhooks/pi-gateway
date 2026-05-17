@@ -22,6 +22,8 @@ export type TelegramChannel = {
   post: (message: string | { markdown?: string; text?: string }) => Promise<unknown>;
 };
 
+export const TELEGRAM_ROUTED_SILENTLY = "__PI_GATEWAY_ROUTED_SILENTLY__";
+
 export function createTelegramRouter(config: TelegramRouterConfig) {
   const aliases = new Map<string, TelegramRouterProject>();
   for (const project of config.projects) {
@@ -169,7 +171,7 @@ export function createTelegramRouter(config: TelegramRouterConfig) {
       const nudge = agent ? nudgeProjectAgent(selected, message.id, text.trim()) : undefined;
       if (agent) setThreadContext(threadId, selected.id, agent.id);
       const debug = process.env.PI_GATEWAY_TELEGRAM_DEBUG === "1";
-      if (!debug) return undefined;
+      if (!debug) return TELEGRAM_ROUTED_SILENTLY;
       return agent
         ? `queued ${message.id} for ${selected.id} agent ${agent.name || agent.id}${nudge?.ok ? " and nudged its cmux session" : `, but cmux nudge failed: ${nudge?.error || nudge?.output || "unknown error"}`}`
         : `🐀 ${selected.id} context active. I queued Operator Message ${message.id} and ${wake?.ok ? `woke an agent (${wake.output || "cmux ok"})` : `tried to wake an agent but failed: ${wake?.error || wake?.output || "unknown error"}`}.`;

@@ -1,3 +1,4 @@
+export { createTelegramRouter, TELEGRAM_ROUTED_SILENTLY } from "../dist/src/relay/telegram-router.js";
 import { createTelegramRouter } from "../dist/src/relay/telegram-router.js";
 import { routerConfigFromHome } from "../dist/src/relay/config.js";
 

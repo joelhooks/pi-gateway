@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { Effect } from "effect";
-import { createTelegramRouter } from "../src/relay/telegram-router.js";
+import { createTelegramRouter, TELEGRAM_ROUTED_SILENTLY } from "../src/relay/telegram-router.js";
 import { GatewayStore } from "../src/store.js";
 function tempRoot(prefix) {
     return mkdtempSync(path.join(tmpdir(), prefix));
@@ -59,7 +59,7 @@ describe("telegram router", () => {
             const router = createTelegramRouter({ defaultProjectId: "aihero", stateFile: path.join(stateRoot, "router.json"), projects: [{ id: "aihero", root, wakeCommand: false }] });
             expect(await router.handle("/aihero", "thread-a")).toContain("attached to AI Hero Agent");
             const sent = await router.handle("please check the deploy", "thread-a");
-            expect(sent).toBeUndefined();
+            expect(sent).toBe(TELEGRAM_ROUTED_SILENTLY);
             const messages = await Effect.runPromise(GatewayStore.fromRoot(root).listMessages());
             expect(messages.at(-1)?.to).toBe("agent-1");
             expect(messages.at(-1)?.metadata).toMatchObject({ contextMode: true, attachedAgentId: "agent-1", agentWakeRequested: false });
@@ -76,7 +76,7 @@ describe("telegram router", () => {
             const router = createTelegramRouter({ defaultProjectId: "aihero", stateFile: path.join(stateRoot, "router.json"), projects: [{ id: "aihero", root, wakeCommand: false }] });
             await router.handle("/aihero", "thread-a");
             const queued = await router.handle("wake up and inspect support", "thread-a");
-            expect(queued).toBeUndefined();
+            expect(queued).toBe(TELEGRAM_ROUTED_SILENTLY);
             const messages = await Effect.runPromise(GatewayStore.fromRoot(root).listMessages());
             expect(messages.at(-1)?.metadata).toMatchObject({ contextMode: true, projectId: "aihero", agentWakeRequested: true });
         }

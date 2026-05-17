@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { Effect } from "effect";
 import { GatewayStore } from "../store.js";
 import { readTelegramContextState, saveTelegramContextState } from "./context-state.js";
+export const TELEGRAM_ROUTED_SILENTLY = "__PI_GATEWAY_ROUTED_SILENTLY__";
 export function createTelegramRouter(config) {
     const aliases = new Map();
     for (const project of config.projects) {
@@ -148,7 +149,7 @@ export function createTelegramRouter(config) {
                 setThreadContext(threadId, selected.id, agent.id);
             const debug = process.env.PI_GATEWAY_TELEGRAM_DEBUG === "1";
             if (!debug)
-                return undefined;
+                return TELEGRAM_ROUTED_SILENTLY;
             return agent
                 ? `queued ${message.id} for ${selected.id} agent ${agent.name || agent.id}${nudge?.ok ? " and nudged its cmux session" : `, but cmux nudge failed: ${nudge?.error || nudge?.output || "unknown error"}`}`
                 : `🐀 ${selected.id} context active. I queued Operator Message ${message.id} and ${wake?.ok ? `woke an agent (${wake.output || "cmux ok"})` : `tried to wake an agent but failed: ${wake?.error || wake?.output || "unknown error"}`}.`;

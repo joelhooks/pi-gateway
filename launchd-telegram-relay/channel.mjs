@@ -4,7 +4,7 @@ import { createMemoryState } from "@chat-adapter/state-memory";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { handlePiGatewayMessage, pollPiGatewayNotifications } from "./pi-gateway-router.mjs";
+import { handlePiGatewayMessage, pollPiGatewayNotifications, TELEGRAM_ROUTED_SILENTLY } from "./pi-gateway-router.mjs";
 import { gatewayHome, ownerChatIdFromHome, readGatewayHomeConfig, telegramNotificationIntervalMsFromHome, telegramTokenFromHome, telegramUserNameFromHome } from "../dist/src/relay/config.js";
 import { setTelegramCommands, telegramCommandsForProjects } from "../dist/src/relay/telegram-commands.js";
 import { Effect } from "effect";
@@ -57,6 +57,11 @@ async function handleMessage(thread, message) {
   try {
     try { await thread.startTyping?.(); } catch (error) { console.error(`[${thread.id}] typing failed:`, error.message?.slice(0, 160)); }
     const routed = await handlePiGatewayMessage(text, thread.id);
+    if (routed === TELEGRAM_ROUTED_SILENTLY) {
+      console.log(`[${thread.id}] gateway routed silently`);
+      return;
+    }
+
     if (routed) {
       console.log(`[${thread.id}] gateway → ${routed.slice(0, 120)}`);
       await thread.post({ markdown: routed });

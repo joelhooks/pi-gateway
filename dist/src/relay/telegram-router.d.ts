@@ -15,6 +15,7 @@ export type TelegramChannel = {
         text?: string;
     }) => Promise<unknown>;
 };
+export declare const TELEGRAM_ROUTED_SILENTLY = "__PI_GATEWAY_ROUTED_SILENTLY__";
 export declare function createTelegramRouter(config: TelegramRouterConfig): {
     handle: (text: string, threadId?: string) => Promise<string | undefined>;
     pollNotifications: (channel: TelegramChannel) => Promise<void>;
